@@ -831,6 +831,8 @@ impl RenderState {
 
                 let text_content = text_content.new_bounds(shape.selrect());
                 let count_inner_strokes = shape.count_visible_inner_strokes();
+                let text_stroke_blur_outset =
+                    Stroke::max_bounds_width(shape.visible_strokes(), false);
                 let mut paragraph_builders = text_content.paragraph_builder_group_from_text(None);
                 let mut stroke_paragraphs_list = shape
                     .visible_strokes()
@@ -858,7 +860,7 @@ impl RenderState {
                     );
 
                     for stroke_paragraphs in stroke_paragraphs_list.iter_mut() {
-                        text::render(
+                        text::render_with_bounds_outset(
                             Some(self),
                             None,
                             &shape,
@@ -866,6 +868,7 @@ impl RenderState {
                             Some(strokes_surface_id),
                             None,
                             None,
+                            text_stroke_blur_outset,
                         );
                     }
                 } else {
@@ -957,7 +960,7 @@ impl RenderState {
 
                         // 4. Stroke fills
                         for stroke_paragraphs in stroke_paragraphs_list.iter_mut() {
-                            text::render(
+                            text::render_with_bounds_outset(
                                 Some(self),
                                 None,
                                 &shape,
@@ -965,6 +968,7 @@ impl RenderState {
                                 Some(strokes_surface_id),
                                 None,
                                 blur_filter.as_ref(),
+                                text_stroke_blur_outset,
                             );
                         }
 
@@ -1703,7 +1707,13 @@ impl RenderState {
             );
 
             if !matches!(element.shape_type, Type::Bool(_)) {
-                for shadow_shape_id in element.children.iter() {
+                let shadow_children = if element.is_recursive() {
+                    get_simplified_children(tree, element)
+                } else {
+                    Vec::new()
+                };
+
+                for shadow_shape_id in shadow_children.iter() {
                     let Some(shadow_shape) = tree.get(shadow_shape_id) else {
                         continue;
                     };
@@ -1896,10 +1906,12 @@ impl RenderState {
                 }
             }
 
+            let can_flatten = element.can_flatten() && !self.focus_mode.should_focus(&element.id);
+
             // Skip render_shape_enter/exit for flattened containers
             // If a container was flattened, it doesn't affect children visually, so we skip
             // the expensive enter/exit operations and process children directly
-            if !element.can_flatten() {
+            if !can_flatten {
                 // Enter focus early so shadow_before_layer can run (it needs focus_mode.is_active())
                 self.focus_mode.enter(&element.id);
 
@@ -1978,7 +1990,7 @@ impl RenderState {
 
             // Skip nested state updates for flattened containers
             // Flattened containers don't affect children, so we don't need to track their state
-            if !element.can_flatten() {
+            if !can_flatten {
                 match element.shape_type {
                     Type::Frame(_) if Self::frame_clip_layer_blur(element).is_some() => {
                         self.nested_blurs.push(None);
@@ -2003,7 +2015,7 @@ impl RenderState {
                 let children_clip_bounds =
                     node_render_state.get_children_clip_bounds(element, None);
 
-                let children_ids: Vec<_> = if element.can_flatten() {
+                let children_ids: Vec<_> = if can_flatten {
                     // Container was flattened: get simplified children (which skip this level)
                     get_simplified_children(tree, element)
                 } else {
@@ -2022,10 +2034,14 @@ impl RenderState {
                     if element.is_flex_reverse() && has_z_index {
                         ids.reverse();
                     }
-                    ids.sort_by(|id1, id2| {
-                        let z1 = tree.get(id1).map(|s| s.z_index()).unwrap_or(0);
-                        let z2 = tree.get(id2).map(|s| s.z_index()).unwrap_or(0);
-                        z2.cmp(&z1)
+                    // Sort by z_index descending (higher z renders on top).
+                    // When z_index is equal, absolute children go behind
+                    // non-absolute children (false < true).
+                    ids.sort_by_key(|id| {
+                        let s = tree.get(id);
+                        let z = s.map(|s| s.z_index()).unwrap_or(0);
+                        let abs = s.map(|s| s.is_absolute()).unwrap_or(false);
+                        (std::cmp::Reverse(z), abs)
                     });
                     ids
                 } else {

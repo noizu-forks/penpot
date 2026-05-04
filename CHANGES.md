@@ -1,12 +1,26 @@
 # CHANGELOG
 
-## 2.14.0 (Unreleased)
+## 2.15.0 (Unreleased)
 
 ### :boom: Breaking changes & Deprecations
 
 ### :rocket: Epics and highlights
 
 ### :heart: Community contributions (Thank you!)
+
+### :sparkles: New features & Enhancements
+
+- Add MCP server integration [Taiga #13112](https://tree.taiga.io/project/penpot/us/13112), [Taiga #13114](https://tree.taiga.io/project/penpot/us/13114)
+- Add woff2 support on user uploaded fonts (by @Nivl) [Github #8248](https://github.com/penpot/penpot/pull/8248)
+- Option to download custom fonts (by @dfelinto) [Github #8320](https://github.com/penpot/penpot/issues/8320)
+- Add copy as image to clipboard option to workspace context menu (by @dfelinto) [Github #8313](https://github.com/penpot/penpot/pull/8313)
+
+### :bug: Bugs fixed
+
+- Fix Alt/Option to draw shapes from center point (by @offreal) [Github #8361](https://github.com/penpot/penpot/pull/8361)
+
+
+## 2.14.0 (Unreleased)
 
 ### :sparkles: New features & Enhancements
 
@@ -34,12 +48,20 @@
 - Fix boolean operators in menu for boards [Taiga #13174](https://tree.taiga.io/project/penpot/issue/13174)
 - Fix viewer can update library [Taiga #13186](https://tree.taiga.io/project/penpot/issue/13186)
 - Fix remove fill affects different element than selected [Taiga #13128](https://tree.taiga.io/project/penpot/issue/13128)
+- Fix unable to finish the create account form using keyboard [Taiga #11333](https://tree.taiga.io/project/penpot/issue/11333)
+
+## 2.13.3
+
+### :bug: Bugs fixed
+
+- Revert yetti (http server) update, because that caused a regression on multipart uploads
 
 ## 2.13.2
 
 ### :bug: Bugs fixed
 
-- Fix security issue (Path Traversal Vulnerability) on fonts related RPC method
+- Fix modifying shapes by apply negative tokens to border radius [Taiga #13317](https://tree.taiga.io/project/penpot/issue/13317)
+- Fix arbitrary file read security issue on create-font-variant rpc method (https://github.com/penpot/penpot/security/advisories/GHSA-xp3f-g8rq-9px2)
 
 
 ## 2.13.1
